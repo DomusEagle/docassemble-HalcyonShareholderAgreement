@@ -1,0 +1,311 @@
+---
+include:
+  - docassemble.AssemblyLine:al_package.yml
+  - halcyon.yml
+---
+initial: true
+code: |
+  speak_text = False
+---
+objects:
+  - officer: DAList.using(object_type=DAObject, there_are_any=True)
+  - shareholder: DAList.using(object_type=DAObject, there_are_any=True)
+---
+mandatory: True
+code: |
+  interview_metadata
+  if not defined("interview_metadata['SA']"):
+    interview_metadata.initializeObject("SA")
+    interview_metadata["SA"].update({
+      "al_weaver_version": "1.3.1",
+      "generated on": "2022-01-04",
+      "title": "SA",
+      "short title": "SA",
+      "description": "SA",
+      "original_form": "",
+      "allowed courts": [
+      ],
+      "categories": [
+      ],        
+      "logic block variable": "interview_order_SA",
+      "attachment block variable": "SA_attachment",
+      "typical role": "na",
+    })
+---
+code: |
+  interview_metadata['main_interview_key'] =  'SA'
+---
+#################### Interview order #####################
+id: interview_order_SA
+code: |
+  allowed_courts = interview_metadata["SA"]["allowed courts"]
+  set_progress(30)
+  name_of_corporation
+  set_progress(50)
+  shareholder[0].type
+  set_progress(70)
+  officer[0].full_name
+  set_progress(90)
+  interview_order_SA = True
+---
+###################### Main order ######################
+mandatory: True
+code: |
+  SA_intro
+  interview_order_SA
+  send_email_to_DD
+  send_DD_email
+  SA_download
+---
+template: what_documents
+subject: |
+  What documents will this app generate?
+content: |
+  TBD
+---
+template: what_information_needed
+subject: |
+  What information will help me complete this app?
+content: |
+  TBD
+---
+template: how_long
+subject: |
+  How long will this take?
+content: |
+  Less than 5 minutes if you have all the information you need. If you need to jump to another matter simply save your session and continue later!
+---
+objects:
+  - halcyon_logo: DAStaticFile.using(filename="Halycon_Logo.png")
+  - halcyon_heading: DAStaticFile.using(filename="Halycon_Title.png")
+---
+id: interlocutory proceedings intro
+question: |
+  <img src="${halcyon_logo.url_for()}" alt="Halcyon" style="width:100%;height:100%;"/>
+subquestion: |
+  <img src="${halcyon_heading.url_for()}" alt="Halcyon" style="width:100%;height:100%;"/>
+  
+  
+  ${ collapse_template(what_documents) }
+  ${ collapse_template(what_information_needed) }
+  ${ collapse_template(how_long) }
+fields:
+  - To continue, you must accept the [Terms and Conditions](https://domusdraft.com/terms-and-conditions/): acknowledged_information_use
+    datatype: checkboxes
+    none of the above: False    
+    minlength: 1
+    choices:
+      - I have read and accept the Terms and Conditions.
+    validation messages:
+      minlength: |
+        You cannot continue unless you agree to the terms of use. 
+continue button field: SA_intro
+---
+id: SA Details
+question: |
+  Corporation Details
+fields:
+  - Name of Corporation: name_of_corporation
+  - note: Is the business incorporated under the Business Corporations Act of Ontario or the Canadian Business Corporations Act?
+  - no label: act
+    datatype: radio
+    choices:
+      - Business Corporations Act: province
+      - Canadian Business Corporations Act: canada
+  - Minimum number of Directors: minimum_number_of_directors
+    datatype: integer
+  - Minimum amount of Life Insurance: minimum_amount_of_life_insurance
+    datatype: currency
+  - Shareholder Agreement Effective Date: effective_date
+    datatype: date
+css: |
+  <style>
+  #daMainQuestion {
+    text-align: center;
+  }
+  </style>
+---
+id: shareholder
+question: |
+  Name of ${ name_of_corporation }'s Shareholders
+fields:
+  - Is this shareholder a Individual or Business?: shareholder[i].type
+    datatype: radio
+    choices:
+      - Individual: individual
+      - Business: business
+  - First Name: shareholder[i].first_name
+    show if:
+      variable: shareholder[i].type
+      is: individual
+  - Last Name: shareholder[i].last_name
+    show if:
+      variable: shareholder[i].type
+      is: individual
+  - Name of Business: shareholder[i].business_name
+    show if:
+      variable: shareholder[i].type
+      is: business
+  - Appointed Director: shareholder[i].director
+    help: This individual will act as the board of director on behalf of the the corporate shareholder.
+    show if:
+      variable: shareholder[i].type
+      is: business
+  - Class of Shares: shareholder[i].class_of_share
+  - Number of Shares: shareholder[i].number_of_shares
+  - Province: shareholder[i].province
+    hint: e.g. Ontario
+  - Lawyer: shareholder[i].lawyer
+  - Law Firm: shareholder[i].law_firm
+list collect:
+  enabled: True
+  add another label: Add Additional Shareholder
+  label: |
+    Shareholder ${ i+1 }.
+---
+id: shareholder
+question: |
+  Name of ${ name_of_corporation }'s Officers
+fields:
+  - Full Name: officer[i].full_name
+    hint: e.g. Jane Doe
+  - Title: officer[i].title
+    hint: e.g. President
+list collect:
+  enabled: True
+  add another label: Add Additional Officer
+  label: |
+    Officer ${ i+1 }.
+---
+id: shareholder agreement review screen
+event: review_shareholder_agreement
+question: |
+  Review your answers
+review:
+  - Edit: name_of_corporation
+    button: |
+      **Name of Corporation**:
+      ${ name_of_corporation }
+  - Edit: minimum_number_of_directors
+    button: |
+      **Number of Directors**:
+      ${ minimum_number_of_directors }      
+  - Edit: minimum_amount_of_life_insurance
+    button: |
+      **Life insurnace Amount**:
+      ${ minimum_amount_of_life_insurance }
+  - Edit: effective_date
+    button: |
+      **Agreement Date**:
+      ${ effective_date } 
+---
+id: download SA
+event: SA_download
+question: |
+  All Done!
+subquestion: |
+  
+  View, download and send your forms below. Click the "Make changes" button to fix any mistakes. Make sure you download each file individually on this screen if you'd like the documents in docx format.
+
+  ${ action_button_html(url_action('review_shareholder_agreement'), label='Make changes', color='info') }
+  
+  
+  ${ al_user_bundle.download_list_html(format="docx", include_zip=False) }
+  
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=True) }
+
+progress: 100
+---
+objects:
+  - Shareholder_Agreement: ALDocument.using(title="Shareholder Agreement", filename="Shareholder_Agreement.docx", enabled=True, has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  - Schedule_A1_Corporation: ALDocument.using(title="Schedule A1", filename="Schedule_A1.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  - Schedule_A1_Individual: ALDocument.using(title="Schedule A1", filename="Schedule_A1.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  - Schedule_A2_Corporation: ALDocument.using(title="Schedule A2", filename="Schedule_A2.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  - Schedule_A2_Individual: ALDocument.using(title="Schedule A2", filename="Schedule_A2.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  - Schedule_A3_Corporation: ALDocument.using(title="Schedule A3", filename="Schedule_A3.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  - Schedule_A3_Individual: ALDocument.using(title="Schedule A3", filename="Schedule_A3.docx", has_addendum=False, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  - Schedule_B: ALDocument.using(title="Schedule B", filename="Schedule_B.docx", has_addendum=False, enabled=True, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+  - Schedule_C: ALDocument.using(title="Schedule C", filename="Schedule_C.docx", has_addendum=False, enabled=True, default_overflow_message=AL_DEFAULT_OVERFLOW_MESSAGE)
+---
+code: |
+  Schedule_A1_Individual.enabled= shareholder[0].type == "individual"
+---
+code: |
+  Schedule_A1_Corporation.enabled= shareholder[0].type == "business"
+---
+code: |
+  Schedule_A2_Corporation.enabled= len(shareholder) >= 2 and shareholder[1].type == "business"
+---
+code: |
+  Schedule_A3_Corporation.enabled= len(shareholder) >= 3 and shareholder[1].type == "business"
+---
+code: |
+  Schedule_A2_Individual.enabled= len(shareholder) >= 2 and shareholder[1].type == "individual"
+---
+code: |
+  Schedule_A3_Individual.enabled= len(shareholder) >= 3 and shareholder[1].type == "individual"
+---
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[Shareholder_Agreement, Schedule_A1_Corporation, Schedule_A1_Individual, Schedule_A2_Corporation, Schedule_A2_Individual, Schedule_A3_Corporation, Schedule_A3_Individual, Schedule_B, Schedule_C], filename="Shareholder_Agreement.pdf", title="All forms to download for your records", enabled=True)
+  - al_recipient_bundle: ALDocumentBundle.using(elements=[Shareholder_Agreement, Schedule_A1_Corporation, Schedule_A1_Individual, Schedule_A2_Corporation, Schedule_A2_Individual, Schedule_A3_Corporation, Schedule_A3_Individual, Schedule_B, Schedule_C], filename="Trust_Documents.pdf", title="All forms to download for your records", enabled=True)
+---
+attachments:
+  - name: Shareholder_Agreement
+    filename: Shareholder_Agreement     
+    variable name: Shareholder_Agreement[i]        
+    docx template file: Shareholder_Agreement.docx
+    skip undefined: True
+  - name: Schedule_A1_Corporation
+    filename: Schedule_A1_Corporation     
+    variable name: Schedule_A1_Corporation[i]        
+    docx template file: Schedule_A1_Corporation.docx
+    skip undefined: True
+  - name: Schedule_A1_Individual
+    filename: Schedule_A1_Individual     
+    variable name: Schedule_A1_Individual[i]        
+    docx template file: Schedule_A1_Individual.docx
+    skip undefined: True
+  - name: Schedule_A2_Corporation
+    filename: Schedule_A2_Corporation     
+    variable name: Schedule_A2_Corporation[i]        
+    docx template file: Schedule_A2_Corporation.docx
+    skip undefined: True
+  - name: Schedule_A2_Individual
+    filename: Schedule_A2_Individual     
+    variable name: Schedule_A2_Individual[i]        
+    docx template file: Schedule_A2_Individual.docx
+    skip undefined: True
+  - name: Schedule_A3_Corporation
+    filename: Schedule_A3_Corporation     
+    variable name: Schedule_A3_Corporation[i]        
+    docx template file: Schedule_A3_Corporation.docx
+    skip undefined: True
+  - name: Schedule_A3_Individual
+    filename: Schedule_A3_Individual     
+    variable name: Schedule_A3_Individual[i]        
+    docx template file: Schedule_A3_Individual.docx
+    skip undefined: True
+  - name: Schedule_B
+    filename: Schedule_B     
+    variable name: Schedule_B[i]        
+    docx template file: Schedule_B.docx
+    skip undefined: True
+  - name: Schedule_C
+    filename: Schedule_C     
+    variable name: Schedule_C[i]        
+    docx template file: Schedule_C.docx
+    skip undefined: True
+---
+code: |
+  send_DD_email = send_email(to='support@domusdraft.com', cc='taayo@domusdraft.com', template=Email_sent, attachments=al_user_bundle.as_editable_list())
+  send_email_to_DD = True
+---
+template: Email_sent
+subject: |
+  Documents generated! - Halycon Shareholder Agreement App
+content: |
+  The generated documents are attached.
+  <br>
+
+  Please review the documents for formatting quality assurance purposes and make any necessary changes in the app templates.
